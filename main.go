@@ -61,11 +61,7 @@ func validate_sudoku(sudoku [][]int) {
 		}
 	}
 
-	if valid {
-		fmt.Println("Valid!")
-	} else {
-		fmt.Println("Not valid :(")
-	}
+	fmt.Println(valid)
 }
 
 func check_zone(zone []int) bool {
