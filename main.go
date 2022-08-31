@@ -2,36 +2,58 @@ package main
 
 import (
 	"fmt"
-	"reflect"
-	"sort"
+	"strconv"
+	"strings"
 )
 
-var sudoku = [][]int{
-	{8, 2, 9, 3, 6, 5, 1, 4, 7},
-	{6, 4, 3, 7, 1, 8, 5, 1, 9},
-	{7, 5, 1, 4, 9, 2, 6, 3, 8},
-	{3, 1, 8, 5, 2, 7, 4, 9, 6},
-	{5, 9, 6, 1, 4, 1, 7, 8, 2},
-	{4, 7, 2, 9, 8, 6, 3, 1, 5},
-	{9, 8, 4, 6, 5, 1, 2, 7, 3},
-	{2, 6, 7, 8, 3, 4, 9, 5, 1},
-	{9, 3, 5, 2, 7, 9, 8, 6, 4},
+var sample_sudokus = [][][]int{
+	{
+		{8, 2, 9, 3, 6, 5, 1, 4, 7},
+		{6, 4, 3, 7, 1, 8, 5, 1, 9},
+		{7, 5, 1, 4, 9, 2, 6, 3, 8},
+		{3, 1, 8, 5, 2, 7, 4, 9, 6},
+		{5, 9, 6, 1, 4, 1, 7, 8, 2},
+		{4, 7, 2, 9, 8, 6, 3, 1, 5},
+		{9, 8, 4, 6, 5, 1, 2, 7, 3},
+		{2, 6, 7, 8, 3, 4, 9, 5, 1},
+		{9, 3, 5, 2, 7, 9, 8, 6, 4},
+	},
+	{
+		{5, 8, 6, 4, 3, 7, 1, 9, 2},
+		{1, 9, 4, 5, 8, 2, 3, 6, 7},
+		{7, 2, 3, 9, 6, 1, 4, 5, 8},
+		{2, 4, 7, 1, 9, 8, 6, 3, 5},
+		{8, 3, 9, 6, 2, 4, 7, 2, 1},
+		{6, 5, 1, 7, 2, 3, 8, 4, 9},
+		{9, 7, 5, 3, 1, 6, 7, 8, 4},
+		{3, 1, 8, 2, 4, 5, 9, 7, 6},
+		{4, 6, 2, 8, 7, 9, 5, 1, 3},
+	},
+	{
+		{1, 8, 3, 2, 7, 4, 6, 5, 9},
+		{9, 7, 4, 5, 8, 6, 3, 2, 1},
+		{2, 6, 5, 1, 9, 3, 7, 4, 8},
+		{5, 9, 2, 8, 3, 1, 4, 6, 7},
+		{8, 4, 6, 7, 2, 5, 9, 1, 3},
+		{7, 3, 1, 4, 6, 9, 2, 8, 5},
+		{3, 5, 9, 6, 4, 8, 1, 7, 2},
+		{6, 1, 7, 3, 5, 2, 8, 9, 4},
+		{4, 2, 8, 9, 1, 7, 5, 3, 6},
+	},
 }
 
-// var sudoku = [][]int{
-// 	{1, 5, 2, 4, 8, 9, 3, 7, 6},
-// 	{7, 3, 9, 2, 5, 6, 8, 4, 1},
-// 	{4, 6, 8, 3, 7, 1, 2, 9, 5},
-// 	{3, 8, 7, 1, 2, 4, 6, 5, 9},
-// 	{5, 9, 1, 7, 6, 3, 4, 2, 8},
-// 	{2, 4, 6, 8, 9, 5, 7, 1, 3},
-// 	{9, 1, 4, 6, 3, 7, 5, 8, 2},
-// 	{6, 2, 5, 9, 4, 8, 1, 3, 7},
-// 	{8, 7, 3, 5, 1, 2, 9, 6, 4},
-// }
+type sudoku_point struct {
+	value int
+	valid bool
+}
 
 func main() {
-	validate_sudoku(sudoku)
+	fmt.Println("Sample 1")
+	validate_sudoku(sample_sudokus[0])
+	fmt.Println("\n\nSample 2")
+	validate_sudoku(sample_sudokus[1])
+	fmt.Println("\n\nSample 3")
+	validate_sudoku(sample_sudokus[2])
 }
 
 func validate_sudoku(sudoku [][]int) {
@@ -40,39 +62,105 @@ func validate_sudoku(sudoku [][]int) {
 	grids := grid_sudoku(sudoku)
 
 	valid := true
+	sudoku_validation_map := make_map(sudoku)
+	error_text := "Errors: "
+	error_locs := []string{}
+
 	for i, row := range rows {
-		valid_zone := check_zone((row))
+		errors, valid_zone := check_zone((row))
 		if !valid_zone {
-			fmt.Println("Error on row", i)
+			error_locs = append(error_locs, "Row "+strconv.Itoa(i+1))
+
+			for _, idx := range errors {
+				sudoku_validation_map[i][idx].valid = false
+			}
 			valid = false
 		}
 	}
 
 	for i, column := range columns {
-		valid_zone := check_zone((column))
+		errors, valid_zone := check_zone((column))
 		if !valid_zone {
-			fmt.Println("Error on column", i)
+			error_locs = append(error_locs, "Column "+strconv.Itoa(i+1))
+			for _, idx := range errors {
+				sudoku_validation_map[idx][i].valid = false
+			}
 			valid = false
 		}
 	}
 
 	for i, grid := range grids {
-		valid_zone := check_zone((grid))
+		errors, valid_zone := check_zone((grid))
 		if !valid_zone {
-			fmt.Println("Error on grid", i)
+			error_locs = append(error_locs, "Grid "+strconv.Itoa(i+1))
+			for _, idx := range errors {
+				sudoku_validation_map[idx/3+(i/3)*3][idx%3+(i%3)*3].valid = false
+			}
 			valid = false
 		}
 	}
 
 	fmt.Println(valid)
+	if !valid {
+		fmt.Println()
+		print_validation_map(sudoku_validation_map)
+		fmt.Println()
+		fmt.Println(error_text, strings.Join(error_locs, ", "))
+	}
 }
 
-func check_zone(zone []int) bool {
-	zoneSorted := append([]int{}, zone...)
-	sort.Slice(zoneSorted, func(a, b int) bool {
-		return zoneSorted[a] < zoneSorted[b]
-	})
-	return reflect.DeepEqual(zoneSorted, []int{1, 2, 3, 4, 5, 6, 7, 8, 9})
+func print_validation_map(validation_map [][]sudoku_point) {
+	colourReset := "\033[0m"
+	colourRed := "\033[31m"
+	for _, row := range validation_map {
+		for _, p := range row {
+			str := strconv.Itoa(p.value)
+			if !p.valid {
+				str = colourRed + str + colourReset
+			}
+			fmt.Print(" " + str + " ")
+		}
+		fmt.Print("\n")
+	}
+}
+
+func make_map(sudoku [][]int) (validation_map [][]sudoku_point) {
+	for i := 0; i < len(sudoku); i++ {
+		validation_map_row := []sudoku_point{}
+		for j := 0; j < len(sudoku[0]); j++ {
+			validation_map_row = append(validation_map_row, sudoku_point{value: sudoku[i][j], valid: true})
+		}
+		validation_map = append(validation_map, validation_map_row)
+	}
+	return
+}
+
+func check_zone(zone []int) (errors []int, valid bool) {
+	errors = get_duplicates(zone)
+	return errors, len(errors) == 0
+}
+
+func get_duplicates(list []int) (duplicates []int) {
+	freq := make(map[int]int)
+	for _, v := range list {
+		_, exists := freq[v]
+		if exists {
+			freq[v] += 1
+		} else {
+			freq[v] = 1
+		}
+	}
+	for v, f := range freq {
+		if f > 1 {
+			for i, v2 := range list {
+				if v2 == v {
+					duplicates = append(duplicates, i)
+				}
+			}
+		}
+	}
+
+	return
 }
 
 func transpose_sudoku(sudoku [][]int) [][]int {
